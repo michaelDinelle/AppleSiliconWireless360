@@ -1,0 +1,23 @@
+// HID gamepad for one connected wireless controller. Created and terminated by Wireless360Slot,
+// which feeds it ready-made input reports.
+#ifndef Wireless360Pad_h
+#define Wireless360Pad_h
+
+#include <Availability.h>
+#include <HIDDriverKit/IOUserHIDDevice.iig>
+
+class Wireless360Pad : public IOUserHIDDevice
+{
+public:
+    virtual bool init() override;
+    virtual void free() override;
+
+    virtual bool handleStart(IOService *provider) override;
+    virtual OSDictionary *newDeviceDescription(void) override;
+    virtual OSData *newReportDescriptor(void) override;
+
+    // Called by Wireless360Slot in the same driver process.
+    virtual void postReport(const uint8_t *report, uint32_t length, uint64_t timestamp) LOCALONLY;
+};
+
+#endif

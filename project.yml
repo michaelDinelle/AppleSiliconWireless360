@@ -1,0 +1,131 @@
+# XcodeGen spec. ./run.sh regenerates Wireless360.xcodeproj from it.
+name: Wireless360
+options:
+  bundleIdPrefix: com.michealdinelle
+  deploymentTarget:
+    macOS: "15.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: R4ZQV7T946
+    # run.sh overrides this per build so macOS replaces the installed driver.
+    # A driver version must be up to three integers.
+    CURRENT_PROJECT_VERSION: "1.0.0"
+    MARKETING_VERSION: "0.1"
+    SWIFT_VERSION: "6.0"
+targets:
+  Wireless360:
+    type: application
+    platform: macOS
+    sources:
+      - path: app
+    info:
+      path: build/generated/App-Info.plist
+      properties:
+        CFBundleDisplayName: Wireless360
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "15.0"
+        NSHumanReadableCopyright: "Not affiliated with Microsoft. Xbox is a trademark of the Microsoft group of companies."
+    entitlements:
+      path: build/generated/App.entitlements
+      properties:
+        com.apple.developer.system-extension.install: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.michealdinelle.wireless360
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - target: Wireless360Driver
+        embed: true
+        codeSign: true
+  Wireless360Driver:
+    type: driver-extension
+    platform: macOS
+    sources:
+      - path: driver
+      - path: protocol
+        excludes: ["test_*.c"]
+    info:
+      path: build/generated/Driver-Info.plist
+      properties:
+        CFBundlePackageType: DEXT
+        CFBundleDisplayName: Wireless360 driver
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        OSBundleUsageDescription: "Driver for the Xbox 360 Wireless Receiver for Windows."
+        OSMinimumDriverKitVersion: "24.0"
+        IOKitPersonalities:
+          # Device level, one per receiver product ID: 0719 and 0291 are Microsoft's,
+          # 02A9 is the common third-party clone that reuses Microsoft's vendor ID.
+          Receiver0719: &receiver
+            CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleIdentifierKernel: com.apple.kpi.iokit
+            IOClass: IOUserService
+            IOUserClass: Wireless360Receiver
+            IOProviderClass: IOUSBHostDevice
+            IOUserServerName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            IOMatchCategory: $(PRODUCT_BUNDLE_IDENTIFIER)
+            idVendor: 1118
+            idProduct: 1817
+          Receiver0291:
+            <<: *receiver
+            idProduct: 657
+          Receiver02A9:
+            <<: *receiver
+            idProduct: 681
+          # Interface level: every controller slot (vendor class, subclass 0x5D, protocol 0x81).
+          # Headset interfaces use protocol 0x82 and are left alone. Wired 360 pads use
+          # protocol 0x01 and stay with Apple's driver.
+          Slot:
+            CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleIdentifierKernel: com.apple.kpi.iokit
+            IOClass: IOUserService
+            IOUserClass: Wireless360Slot
+            IOProviderClass: IOUSBHostInterface
+            IOUserServerName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            idVendor: 1118
+            bInterfaceSubClass: 93
+            bInterfaceProtocol: 129
+            # Created by Wireless360Slot with IOService::Create while a controller is connected.
+            Wireless360PadProperties:
+              CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+              CFBundleIdentifierKernel: com.apple.iokit.IOHIDFamily
+              IOClass: AppleUserHIDDevice
+              IOUserClass: Wireless360Pad
+              IOUserServerName: $(PRODUCT_BUNDLE_IDENTIFIER)
+              # Opt in to AppleGameControllerPersonality's "Generic Controller Device", which puts
+              # GameController.framework's own HID driver on top. Its MFi path only matches the
+              # kernel IOHIDEventDriver, not the AppleUserHIDEventDriver dext macOS 27 uses here.
+              GameControllerSupportedHIDDevice: true
+              GameControllerCategory: dynamic
+    entitlements:
+      path: build/generated/Driver.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.developer.driverkit: true
+        com.apple.developer.driverkit.family.hid.device: true
+        # The development profile grants idVendor "*" and the signed value must match it exactly.
+        # Narrow to 1118 if Apple grants a distribution entitlement.
+        com.apple.developer.driverkit.transport.usb:
+          - idVendor: "*"
+    dependencies:
+      - sdk: DriverKit.framework
+      - sdk: USBDriverKit.framework
+      - sdk: HIDDriverKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.michealdinelle.wireless360.driver
+        PRODUCT_NAME: com.michealdinelle.wireless360.driver
+        SDKROOT: driverkit
+        DRIVERKIT_DEPLOYMENT_TARGET: "24.0"
+        ARCHS: arm64e
+        CODE_SIGN_STYLE: Automatic
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/protocol"
+        CLANG_CXX_LANGUAGE_STANDARD: c++17
+schemes:
+  Wireless360:
+    build:
+      targets:
+        Wireless360: all
+        Wireless360Driver: all

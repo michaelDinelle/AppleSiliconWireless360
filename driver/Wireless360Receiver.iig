@@ -1,0 +1,16 @@
+// Device-level driver. macOS leaves the vendor-class receiver unconfigured; this selects
+// configuration 1 so its interfaces are published and Wireless360Slot can match them.
+#ifndef Wireless360Receiver_h
+#define Wireless360Receiver_h
+
+#include <Availability.h>
+#include <DriverKit/IOService.iig>
+
+class Wireless360Receiver : public IOService
+{
+public:
+    virtual kern_return_t Start(IOService *provider) override;
+    virtual kern_return_t Stop(IOService *provider) override;
+};
+
+#endif
