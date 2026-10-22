@@ -25,6 +25,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: "15.0"
+        LSUIElement: true   # no Dock icon or menu bar: the app only installs the driver and quits
         NSHumanReadableCopyright: "Not affiliated with Microsoft. Xbox is a trademark of the Microsoft group of companies."
     entitlements:
       path: build/generated/App.entitlements
@@ -94,11 +95,6 @@ targets:
               IOClass: AppleUserHIDDevice
               IOUserClass: Wireless360Pad
               IOUserServerName: $(PRODUCT_BUNDLE_IDENTIFIER)
-              # Opt in to AppleGameControllerPersonality's "Generic Controller Device", which puts
-              # GameController.framework's own HID driver on top. Its MFi path only matches the
-              # kernel IOHIDEventDriver, not the AppleUserHIDEventDriver dext macOS 27 uses here.
-              GameControllerSupportedHIDDevice: true
-              GameControllerCategory: dynamic
     entitlements:
       path: build/generated/Driver.entitlements
       properties:

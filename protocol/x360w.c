@@ -28,40 +28,50 @@ static void put16(uint8_t *p, uint16_t v)
     p[1] = (uint8_t)(v >> 8);
 }
 
-// Report layout matches kReportDescriptor in Wireless360Pad.cpp:
-// [0] ID, [1..8] X Y Z Rz as unsigned 16-bit, [9..12] LT RT, [13] dpad up down right left + A B X Y,
-// [14] LB RB LS RS, start (AC Exit), back (AC Properties), guide (AC Home), pad.
+// Hat switch value for dpad bits up, down, left, right (xpad order). 0 is centered, 1..8 run
+// clockwise from up. Opposite directions pressed together cancel out.
+static uint8_t hat(uint8_t lo)
+{
+    int x = !!(lo & 0x08) - !!(lo & 0x04);   // right - left
+    int y = !!(lo & 0x02) - !!(lo & 0x01);   // down - up
+    static const uint8_t table[3][3] = {
+        {8, 1, 2},   // y = -1 (up): left, none, right
+        {7, 0, 3},   // y =  0
+        {6, 5, 4},   // y = +1 (down)
+    };
+    return table[y + 1][x + 1];
+}
+
+// Xbox Wireless Controller (045E:0B13) Bluetooth report 1, the layout of kReportDescriptor in
+// Wireless360Pad.cpp and of SDL's HIDAPI xboxone Bluetooth parser:
+// [0] ID, [1..8] LX LY RX RY unsigned 16-bit with Y down, [9..12] LT RT 10-bit, [13] hat,
+// [14] A B - X Y - LB RB, [15] - - view menu guide LS RS -, [16] share (unused).
 void x360w_build_report(const uint8_t *p, uint8_t *r)
 {
     uint8_t lo = p[IN_BUTTONS_LO], hi = p[IN_BUTTONS_HI];
 
+    memset(r, 0, X360W_REPORT_SIZE);
     r[0] = X360W_REPORT_ID;
-    // int16 to unsigned 0..65535. Y passes through unflipped: GameController reads up as positive.
     for (int i = 0; i < 4; i++) {
         uint16_t raw = (uint16_t)(p[IN_LX + 2 * i] | (p[IN_LX + 2 * i + 1] << 8));
-        put16(r + 1 + 2 * i, (uint16_t)(raw ^ 0x8000));
+        uint16_t u = (uint16_t)(raw ^ 0x8000);   // int16 to 0..65535
+        put16(r + 1 + 2 * i, (i & 1) ? (uint16_t)(0xFFFF - u) : u);   // 360 Y is up, HID Y is down
     }
-    put16(r + 9, p[IN_LT]);
-    put16(r + 11, p[IN_RT]);
+    put16(r + 9, (uint16_t)(p[IN_LT] << 2 | p[IN_LT] >> 6));   // 0..255 to 0..1023
+    put16(r + 11, (uint16_t)(p[IN_RT] << 2 | p[IN_RT] >> 6));
+    r[13] = hat(lo);
 
-    uint8_t b13 = 0, b14 = 0;
-    if (lo & 0x01) b13 |= 1u << 0;   // dpad up
-    if (lo & 0x02) b13 |= 1u << 1;   // dpad down
-    if (lo & 0x08) b13 |= 1u << 2;   // dpad right (HID 0x92)
-    if (lo & 0x04) b13 |= 1u << 3;   // dpad left (HID 0x93)
-    if (hi & 0x10) b13 |= 1u << 4;   // A
-    if (hi & 0x20) b13 |= 1u << 5;   // B
-    if (hi & 0x40) b13 |= 1u << 6;   // X
-    if (hi & 0x80) b13 |= 1u << 7;   // Y
-    if (hi & 0x01) b14 |= 1u << 0;   // LB
-    if (hi & 0x02) b14 |= 1u << 1;   // RB
-    if (lo & 0x40) b14 |= 1u << 2;   // LS
-    if (lo & 0x80) b14 |= 1u << 3;   // RS
-    if (lo & 0x10) b14 |= 1u << 4;   // start
-    if (lo & 0x20) b14 |= 1u << 5;   // back
-    if (hi & 0x04) b14 |= 1u << 6;   // guide
-    r[13] = b13;
-    r[14] = b14;
+    if (hi & 0x10) r[14] |= 0x01;   // A
+    if (hi & 0x20) r[14] |= 0x02;   // B
+    if (hi & 0x40) r[14] |= 0x08;   // X
+    if (hi & 0x80) r[14] |= 0x10;   // Y
+    if (hi & 0x01) r[14] |= 0x40;   // LB
+    if (hi & 0x02) r[14] |= 0x80;   // RB
+    if (lo & 0x20) r[15] |= 0x04;   // back -> view
+    if (lo & 0x10) r[15] |= 0x08;   // start -> menu
+    if (hi & 0x04) r[15] |= 0x10;   // guide
+    if (lo & 0x40) r[15] |= 0x20;   // LS
+    if (lo & 0x80) r[15] |= 0x40;   // RS
 }
 
 void x360w_presence_query(uint8_t *out)

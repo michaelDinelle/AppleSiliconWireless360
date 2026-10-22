@@ -22,7 +22,12 @@ SOFTWARE.
 
 ---
 
-The HID report descriptor in driver/Wireless360Pad.cpp is adapted from macgip
+The driver structure and tools/hid_watch.c are adapted from macgip
 (https://github.com/leetrout/macgip), used under the MIT License:
 
 Copyright (c) 2026 Lee Trout
+
+The HID report descriptor in driver/Wireless360Pad.cpp is from OpenJoystickDriver
+(https://github.com/xsyetopz/OpenJoystickDriver), used under the MIT License:
+
+Copyright (c) 2026 Krystian J.

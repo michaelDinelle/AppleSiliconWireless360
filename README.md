@@ -16,8 +16,10 @@ You don't need this for wired Xbox 360 controllers. macOS 15 and later supports 
 
 Early development. Tested with a `045E:0719` receiver on macOS 27.2 (Apple Silicon):
 
-- Works: the driver loads with SIP on, the controller's ring shows its player number, and every button, trigger and stick reaches apps that read HID directly through IOKit or SDL (`tools/hid_watch.c`).
-- Not working yet: Apple's Game Controller framework doesn't adopt the pad, so games that only use it (for example World of Warcraft) don't see the controller. On macOS 27.2 none of `AppleGameControllerPersonality`'s drivers attach to it, even when it reports the wired Xbox 360 ID `028E`.
+- The driver loads with SIP on, and the controller's ring shows its player number.
+- Apple's Game Controller framework sees each pad as an extended gamepad, with correct buttons, analog triggers and sticks (`tools/gc_check.swift`). So do apps that read HID directly.
+
+Each pad presents itself as an **Xbox Wireless Controller** (`045E:0B13`) and sends that controller's Bluetooth report layout. On macOS 27, Game Controller only accepts HID devices from third-party drivers when their ID is on Apple's `GCIOMatchVirtual` list. The `IOGCDynamicDeviceProbe` and `AppleGCHIDUserEventDriver` probes reject anything whose bundle ID doesn't start with `com.apple.`, and they key on the device's real bundle ID, which a driver can't change.
 
 There is no rumble or headset support yet.
 
@@ -39,11 +41,14 @@ In `project.yml`, set `DEVELOPMENT_TEAM` and the bundle IDs to your own. Then ru
 ./run.sh
 ```
 
-The script runs the protocol test, builds the app and driver, copies the app to `/Applications` and opens it.
+The script does the following:
 
-1. Click **Install driver**.
-2. Approve the driver in System Settings → General → Login Items & Extensions → Driver Extensions.
-3. Plug in the receiver and press the guide button on the controller.
+1. Runs the protocol test.
+2. Builds the app and the driver.
+3. Copies the app to `/Applications` and opens it. The app has no window: it activates the driver and quits.
+4. Re-enumerates the receiver (`tools/replug.c`), so the new driver takes over without unplugging.
+
+The first time, approve the driver in System Settings → General → Login Items & Extensions → Driver Extensions. The app opens that page for you. After that, plug in the receiver and press the guide button on the controller. To uninstall, move the app to the Trash.
 
 To see the driver's logs:
 
@@ -57,6 +62,6 @@ log stream --predicate 'eventMessage CONTAINS "wireless360"'
 - `Wireless360Slot` runs once per controller slot. It polls the slot's interrupt endpoint and creates or removes a `Wireless360Pad` HID device as controllers connect and disconnect.
 - `protocol/x360w.c` parses the packets and builds the HID report. It's plain C with a host-side test.
 
-The packet formats come from the Linux `xpad` driver and SDL. The HID layout is adapted from [macgip](https://github.com/leetrout/macgip).
+The packet formats come from the Linux `xpad` driver and SDL. The HID descriptor comes from [OpenJoystickDriver](https://github.com/xsyetopz/OpenJoystickDriver). The driver structure follows [macgip](https://github.com/leetrout/macgip).
 
 Xbox is a trademark of the Microsoft group of companies. This project is not affiliated with Microsoft.

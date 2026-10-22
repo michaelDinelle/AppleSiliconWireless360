@@ -29,6 +29,9 @@ kern_return_t IMPL(Wireless360Receiver, Start)
         Stop(provider, SUPERDISPATCH);
         return ret;
     }
+    // Let go of the device: the slots open their own interfaces, and an open device would stop
+    // tools/replug from re-enumerating the receiver after a driver update.
+    device->Close(this, 0);
     LOG("configuration 1 selected");
     RegisterService();
     return kIOReturnSuccess;
@@ -36,9 +39,5 @@ kern_return_t IMPL(Wireless360Receiver, Start)
 
 kern_return_t IMPL(Wireless360Receiver, Stop)
 {
-    IOUSBHostDevice *device = OSDynamicCast(IOUSBHostDevice, provider);
-    if (device) {
-        device->Close(this, 0);
-    }
     return Stop(provider, SUPERDISPATCH);
 }

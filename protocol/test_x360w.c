@@ -21,13 +21,22 @@ int main(void)
     x360w_build_report(in, r);
     assert(r[0] == X360W_REPORT_ID);
     assert(r[1] == 0xFF && r[2] == 0xFF);   // LX  32767 -> 65535
-    assert(r[3] == 0x00 && r[4] == 0x00);   // LY -32768 -> 0
+    assert(r[3] == 0xFF && r[4] == 0xFF);   // LY -32768 (full down) -> 65535 (HID down)
     assert(r[5] == 0x00 && r[6] == 0x80);   // RX      0 -> 32768
-    assert(r[7] == 0xFF && r[8] == 0x7F);   // RY     -1 -> 32767
-    assert(r[9] == 0xFF && r[10] == 0x00);  // LT
+    assert(r[7] == 0x00 && r[8] == 0x80);   // RY     -1 -> 32768
+    assert(r[9] == 0xFF && r[10] == 0x03);  // LT 255 -> 1023
     assert(r[11] == 0x00 && r[12] == 0x00); // RT
-    assert(r[13] == ((1u << 3) | (1u << 4)));   // dpad left, A
-    assert(r[14] == ((1u << 4) | (1u << 6)));   // start, guide
+    assert(r[13] == 7);                     // hat: left
+    assert(r[14] == 0x01);                  // A
+    assert(r[15] == (0x08 | 0x10));         // menu, guide
+    assert(r[16] == 0x00);
+
+    in[6] = 0x01 | 0x08;                    // up + right
+    x360w_build_report(in, r);
+    assert(r[13] == 2);
+    in[6] = 0x01 | 0x02;                    // up + down cancel
+    x360w_build_report(in, r);
+    assert(r[13] == 0);
 
     uint8_t cmd[X360W_COMMAND_SIZE];
     x360w_set_led(cmd, 1);

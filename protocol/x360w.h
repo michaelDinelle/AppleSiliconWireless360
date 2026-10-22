@@ -19,12 +19,13 @@ enum x360w_kind {
 };
 
 #define X360W_COMMAND_SIZE 12
-#define X360W_REPORT_SIZE 15
+#define X360W_REPORT_SIZE 17   // Xbox Wireless Controller (045E:0B13) Bluetooth input report 1
 #define X360W_REPORT_ID 1
 
 enum x360w_kind x360w_classify(const uint8_t *packet, size_t length);
 
-// Writes the HID input report for an X360W_INPUT packet. `report` must hold X360W_REPORT_SIZE bytes.
+// Writes the HID input report for an X360W_INPUT packet, in the Xbox Wireless Controller Bluetooth
+// format. `report` must hold X360W_REPORT_SIZE bytes.
 void x360w_build_report(const uint8_t *packet, uint8_t *report);
 
 // Each writes X360W_COMMAND_SIZE bytes.

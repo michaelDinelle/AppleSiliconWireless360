@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 {
     double secs = argc > 1 ? atof(argv[1]) : 20;
     IOHIDManagerRef m = IOHIDManagerCreate(kCFAllocatorDefault, 0);
-    int vid = 0x045e, pid = 0x028e;
+    int vid = 0x045e, pid = 0x0b13;
     CFNumberRef v = CFNumberCreate(0, kCFNumberIntType, &vid), p = CFNumberCreate(0, kCFNumberIntType, &pid);
     const void *keys[] = { CFSTR(kIOHIDVendorIDKey), CFSTR(kIOHIDProductIDKey) }, *vals[] = { v, p };
     CFDictionaryRef match = CFDictionaryCreate(0, keys, vals, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
